@@ -1,6 +1,6 @@
 hotkey: "<ctrl>+<space>"
 language: en-US
-google_credentials: ~/.config/gcloud/service-account.json
+# google_credentials: path/to/service-account.json  # Optional: leave commented to use 'gcloud auth application-default login'
 sample_rate: 16000
 chunk_size: 1600
 grammar_correction: true
