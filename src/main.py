@@ -39,6 +39,15 @@ class Shhh:
         self._sample_rate = self._config.get("sample_rate", 16000)
         self._chunk_size = self._config.get("chunk_size", 1600)
 
+        # Verify credentials exist
+        if self._credentials:
+            creds_path = os.path.expanduser(self._credentials)
+            if not os.path.exists(creds_path):
+                print(f"⚠️  Google credentials not found at: {creds_path}")
+                print("   Set 'google_credentials' in config.yaml or set GOOGLE_APPLICATION_CREDENTIALS env var.")
+                sys.exit(1)
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+
         self._recording = False
         self._should_stop = threading.Event()
         self._transcriber = Transcriber(

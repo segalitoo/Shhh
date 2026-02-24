@@ -23,7 +23,13 @@ class MicrophoneStream:
         self.closed = True
 
     def __enter__(self):
-        self._audio_interface = pyaudio.PyAudio()
+        try:
+            self._audio_interface = pyaudio.PyAudio()
+        except OSError as e:
+            raise RuntimeError(
+                "Could not initialize audio. Is PortAudio installed? "
+                "Run: brew install portaudio"
+            ) from e
         self._audio_stream = self._audio_interface.open(
             format=pyaudio.paInt16,
             channels=1,
