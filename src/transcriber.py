@@ -8,7 +8,8 @@ from google.cloud import speech
 class Transcriber:
     """Streams audio to Google Cloud STT and yields transcription results."""
 
-    def __init__(self, language: str = "en-US", credentials_path: str = None):
+    def __init__(self, language: str = "en-US", alternative_languages: list = None,
+                 credentials_path: str = None):
         if credentials_path:
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
         self._client = speech.SpeechClient()
@@ -16,6 +17,7 @@ class Transcriber:
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
             sample_rate_hertz=16000,
             language_code=language,
+            alternative_language_codes=alternative_languages or [],
         )
         self._streaming_config = speech.StreamingRecognitionConfig(
             config=self._config,

@@ -30,3 +30,17 @@ class TestTextOutput:
         output.type_final("hello ")
         output.type_final("world")
         assert output.get_accumulated_text() == "hello world"
+
+    def test_hebrew_text_accumulated(self):
+        """Hebrew text should accumulate correctly."""
+        output = TextOutput(simulate=True)
+        output.type_final("שלום ")
+        output.type_final("עולם")
+        assert output.get_accumulated_text() == "שלום עולם"
+
+    def test_mixed_language_accumulated(self):
+        """Mixed Hebrew and English should accumulate correctly."""
+        output = TextOutput(simulate=True)
+        output.type_final("hello ")
+        output.type_final("שלום")
+        assert output.get_accumulated_text() == "hello שלום"

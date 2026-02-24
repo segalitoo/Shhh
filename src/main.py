@@ -50,10 +50,13 @@ class Shhh:
         # If no credentials path configured, google-cloud-speech will use
         # Application Default Credentials (via 'gcloud auth application-default login')
 
+        self._alternative_languages = self._config.get("alternative_languages", [])
+
         self._recording = False
         self._should_stop = threading.Event()
         self._transcriber = Transcriber(
             language=self._language,
+            alternative_languages=self._alternative_languages,
             credentials_path=self._credentials,
         )
         self._output = TextOutput()
@@ -92,10 +95,18 @@ class Shhh:
                             return
                         yield chunk
 
+                def on_interim(text):
+                    print(f"  [interim] {text}")
+                    self._output.type_interim(text)
+
+                def on_final(text):
+                    print(f"  [FINAL] {text}")
+                    self._output.type_final(text)
+
                 self._transcriber.transcribe_stream(
                     audio_gen(),
-                    on_interim=self._output.type_interim,
-                    on_final=self._output.type_final,
+                    on_interim=on_interim,
+                    on_final=on_final,
                 )
         except Exception as e:
             print(f"\n❌ Transcription error: {e}")
@@ -109,12 +120,9 @@ class Shhh:
                 print("📝 Running grammar correction...")
                 corrected = correct_text(accumulated, self._language)
                 if corrected != accumulated:
-                    # Backspace the accumulated text and retype corrected version
-                    total_len = len(accumulated)
-                    for _ in range(total_len):
-                        self._output._keyboard.press(keyboard.Key.backspace)
-                        self._output._keyboard.release(keyboard.Key.backspace)
-                    self._output._keyboard.type(corrected)
+                    # Select and replace the dictated text
+                    self._output._backspace(len(accumulated))
+                    self._output._paste_text(corrected)
                     print("✅ Grammar corrected.")
                 else:
                     print("✅ No grammar corrections needed.")
@@ -124,7 +132,8 @@ class Shhh:
         print("=" * 50)
         print("  Shhh — Live Dictation Tool")
         print(f"  Hotkey: {self._hotkey_str}")
-        print(f"  Language: {self._language}")
+        langs = [self._language] + self._alternative_languages
+        print(f"  Languages: {', '.join(langs)}")
         print(f"  Grammar correction: {'on' if self._grammar_enabled else 'off'}")
         print("=" * 50)
         print(f"\nPress {self._hotkey_str} to start/stop dictation.")
