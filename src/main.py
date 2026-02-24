@@ -96,11 +96,11 @@ class Shhh:
                         yield chunk
 
                 def on_interim(text):
-                    print(f"  [interim] {text}")
-                    self._output.type_interim(text)
+                    # Show live progress in terminal only (no keystrokes = no sound)
+                    print(f"\r  💬 {text}    ", end="", flush=True)
 
                 def on_final(text):
-                    print(f"  [FINAL] {text}")
+                    print(f"\r  ✅ {text}    ")
                     self._output.type_final(text)
 
                 self._transcriber.transcribe_stream(
