@@ -1,13 +1,14 @@
 # Shhh — Live Dictation Tool for macOS
 
 ## Project Overview
-A Python CLI tool that captures microphone audio, streams it to Google Cloud Speech-to-Text for live transcription, and types the result directly into the active application. Grammar correction runs when dictation stops.
+A Python CLI tool that captures microphone audio, streams it to Google Cloud Speech-to-Text for live transcription, and pastes the result into the frontmost application. Supports English and Hebrew with auto-detection. Grammar correction runs when dictation stops.
 
 ## Tech Stack
-- Python 3.11+
+- Python 3.9+ (3.11+ recommended)
 - google-cloud-speech (streaming gRPC API)
 - sounddevice (audio capture, bundles PortAudio — no brew needed)
-- pynput (global hotkey listener + keystroke simulation)
+- pynput (global hotkey listener)
+- osascript/AppleScript (paste into frontmost app via System Events)
 - requests (LanguageTool API)
 - pyyaml (config)
 - pytest (testing)
@@ -20,9 +21,9 @@ shhh/
 ├── requirements.txt
 ├── src/
 │   ├── __init__.py
-│   ├── audio.py         # MicrophoneStream context manager
-│   ├── transcriber.py   # Google STT streaming client
-│   ├── output.py        # Keystroke simulation via pynput
+│   ├── audio.py         # MicrophoneStream context manager (sounddevice)
+│   ├── transcriber.py   # Google STT streaming client (bilingual en/he)
+│   ├── output.py        # Paste into frontmost app via pbcopy + osascript
 │   ├── grammar.py       # LanguageTool API correction
 │   └── main.py          # Orchestrator + hotkey toggle
 ├── tests/
@@ -34,20 +35,31 @@ shhh/
 
 ## Architecture
 - Single main thread runs STT streaming loop
-- pynput GlobalHotKeys runs in background thread for toggle (Ctrl+Space)
+- pynput HotKey listener runs in background thread for toggle (Ctrl+Space)
 - threading.Event coordinates start/stop between hotkey and recording
-- Interim transcription results typed at cursor, replaced on update
+- Interim results shown in terminal only (fast, no keystrokes)
+- Final results pasted into frontmost app via pbcopy + osascript Cmd+V
 - Grammar correction (LanguageTool) runs only when dictation stops
 
 ## Commands
 - Run: `source venv/bin/activate && python3 -m src.main`
 - Test: `python3 -m pytest tests/ -v`
 - Install deps: `pip install -r requirements.txt`
+- Auth: `~/google-cloud-sdk/bin/gcloud auth application-default login`
+
+## macOS Permissions Required
+- **Accessibility** — Terminal app must be in System Settings → Privacy & Security → Accessibility
+- **Microphone** — macOS will prompt on first run
+- **Automation** — Allow Terminal to control System Events (prompted automatically)
 
 ## Key Decisions
 - Streaming (not batch) transcription for live dictation
-- Insert at cursor via pynput keystroke simulation (requires macOS Accessibility permission)
+- Paste via clipboard (pbcopy + osascript) — handles Hebrew/English correctly
+- NOT pynput keyboard.type() — garbles non-ASCII on bilingual keyboards
+- Interim results terminal-only — avoids latency and system alert sounds
 - Grammar correction deferred to stop-time (not inline) to avoid latency
+- Application Default Credentials (gcloud auth) — no service account key needed
+- sounddevice over pyaudio — bundles PortAudio, no Homebrew dependency
 - Custom dictionary deferred to later phase
 - SwiftUI wrapper deferred to later phase
 
@@ -55,4 +67,4 @@ shhh/
 - Use `src/` package for all source modules
 - Tests in `tests/` with `test_` prefix
 - Config via `config.yaml` in project root
-- Google credentials path set in config.yaml, expanded at runtime
+- Google credentials via Application Default Credentials (gcloud auth)
