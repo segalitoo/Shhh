@@ -2,11 +2,15 @@
 
 import queue
 
-import pyaudio
+import numpy as np
+import sounddevice as sd
 
 
 class MicrophoneStream:
     """Opens a recording stream as a generator yielding audio chunks.
+
+    Uses sounddevice (which bundles PortAudio) instead of pyaudio,
+    so no separate PortAudio installation is needed.
 
     Usage:
         with MicrophoneStream(rate=16000, chunk_size=1600) as stream:
@@ -18,42 +22,39 @@ class MicrophoneStream:
         self._rate = rate
         self._chunk_size = chunk_size
         self._buff: queue.Queue = queue.Queue()
-        self._audio_interface = None
-        self._audio_stream = None
+        self._stream = None
         self.closed = True
 
     def __enter__(self):
         try:
-            self._audio_interface = pyaudio.PyAudio()
-        except OSError as e:
+            self._stream = sd.RawInputStream(
+                samplerate=self._rate,
+                blocksize=self._chunk_size,
+                dtype="int16",
+                channels=1,
+                callback=self._fill_buffer,
+            )
+            self._stream.start()
+        except Exception as e:
             raise RuntimeError(
-                "Could not initialize audio. Is PortAudio installed? "
-                "Run: brew install portaudio"
+                f"Could not initialize audio: {e}\n"
+                "Check that your microphone is connected and accessible."
             ) from e
-        self._audio_stream = self._audio_interface.open(
-            format=pyaudio.paInt16,
-            channels=1,
-            rate=self._rate,
-            input=True,
-            frames_per_buffer=self._chunk_size,
-            stream_callback=self._fill_buffer,
-        )
         self.closed = False
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._audio_stream:
-            self._audio_stream.stop_stream()
-            self._audio_stream.close()
+        if self._stream:
+            self._stream.stop()
+            self._stream.close()
         self.closed = True
         self._buff.put(None)  # Signal generator to stop
-        if self._audio_interface:
-            self._audio_interface.terminate()
 
-    def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
-        """PyAudio callback: puts audio data into the buffer."""
-        self._buff.put(in_data)
-        return None, pyaudio.paContinue
+    def _fill_buffer(self, indata, frames, time, status):
+        """sounddevice callback: puts raw audio bytes into the buffer."""
+        if status:
+            print(f"Audio status: {status}")
+        self._buff.put(bytes(indata))
 
     def generator(self):
         """Yields audio chunks from the buffer until closed."""

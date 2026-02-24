@@ -6,7 +6,7 @@ A Python CLI tool that captures microphone audio, streams it to Google Cloud Spe
 ## Tech Stack
 - Python 3.11+
 - google-cloud-speech (streaming gRPC API)
-- pyaudio (audio capture, requires PortAudio: `brew install portaudio`)
+- sounddevice (audio capture, bundles PortAudio — no brew needed)
 - pynput (global hotkey listener + keystroke simulation)
 - requests (LanguageTool API)
 - pyyaml (config)
