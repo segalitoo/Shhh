@@ -16,6 +16,7 @@ from src.audio import MicrophoneStream
 from src.transcriber import Transcriber
 from src.output import TextOutput
 from src.grammar import correct_text
+from src.formatter import format_text
 
 
 def load_config(path: str = "config.yaml") -> dict:
@@ -100,8 +101,9 @@ class Shhh:
                     print(f"\r  💬 {text}    ", end="", flush=True)
 
                 def on_final(text):
-                    print(f"\r  ✅ {text}    ")
-                    self._output.type_final(text)
+                    formatted = format_text(text)
+                    print(f"\r  ✅ {formatted}    ")
+                    self._output.type_final(formatted)
 
                 self._transcriber.transcribe_stream(
                     audio_gen(),
