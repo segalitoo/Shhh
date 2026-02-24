@@ -120,8 +120,17 @@ class Shhh:
                 print("📝 Running grammar correction...")
                 corrected = correct_text(accumulated, self._language)
                 if corrected != accumulated:
-                    # Select and replace the dictated text
-                    self._output._backspace(len(accumulated))
+                    # Select the dictated text with Shift+Left arrows, then paste replacement
+                    import subprocess
+                    n = len(accumulated)
+                    script = (
+                        f'tell application "System Events"\n'
+                        f'  repeat {n} times\n'
+                        f'    key code 123 using shift down\n'
+                        f'  end repeat\n'
+                        f'end tell'
+                    )
+                    subprocess.run(["osascript", "-e", script], timeout=10)
                     self._output._paste_text(corrected)
                     print("✅ Grammar corrected.")
                 else:

@@ -1,19 +1,14 @@
-"""Text output via clipboard paste.
+"""Text output via clipboard paste to the frontmost application.
 
-Uses clipboard (pbcopy/Cmd+V) instead of keystroke simulation
-to correctly handle all languages including Hebrew, Arabic, etc.
+Uses pbcopy + osascript to reliably paste into whatever app has focus,
+correctly handling all languages including Hebrew.
 """
 
 import subprocess
 
-from pynput.keyboard import Controller, Key
-
 
 class TextOutput:
-    """Pastes text at the cursor position using clipboard.
-
-    Handles interim (partial) results by tracking character count
-    and using backspace to replace them when updated.
+    """Pastes text into the frontmost application using clipboard + AppleScript.
 
     Args:
         simulate: If True, don't actually type (for testing).
@@ -21,50 +16,35 @@ class TextOutput:
 
     def __init__(self, simulate: bool = False):
         self._simulate = simulate
-        self._keyboard = None if simulate else Controller()
-        self._interim_chars = 0
         self._accumulated: list[str] = []
 
-    def _backspace(self, count: int):
-        """Send N backspace keystrokes."""
-        if self._simulate or not self._keyboard:
-            return
-        for _ in range(count):
-            self._keyboard.press(Key.backspace)
-            self._keyboard.release(Key.backspace)
-
     def _paste_text(self, text: str):
-        """Paste text via clipboard (handles all languages correctly)."""
-        if self._simulate or not self._keyboard:
+        """Copy text to clipboard and Cmd+V into the frontmost app via AppleScript."""
+        if self._simulate:
             return
         # Copy text to clipboard
         subprocess.run(["pbcopy"], input=text, text=True, timeout=2)
-        # Paste with Cmd+V
-        self._keyboard.press(Key.cmd)
-        self._keyboard.press('v')
-        self._keyboard.release('v')
-        self._keyboard.release(Key.cmd)
+        # Send Cmd+V to the frontmost application via AppleScript
+        subprocess.run([
+            "osascript", "-e",
+            'tell application "System Events" to keystroke "v" using command down'
+        ], timeout=2)
 
-    def type_interim(self, text: str):
-        """Type interim (partial) transcription result.
-
-        Replaces any previous interim text with backspaces first.
-        """
-        if self._interim_chars > 0:
-            self._backspace(self._interim_chars)
-        self._paste_text(text)
-        self._interim_chars = len(text)
+    def _backspace(self, count: int):
+        """Send N backspace keystrokes to the frontmost app via AppleScript."""
+        if self._simulate:
+            return
+        # AppleScript to press delete key N times
+        script = f'tell application "System Events" to key code 51 using {{}} -- repeat {count} times'
+        for _ in range(count):
+            subprocess.run([
+                "osascript", "-e",
+                'tell application "System Events" to key code 51'
+            ], timeout=2)
 
     def type_final(self, text: str):
-        """Type final transcription result.
-
-        Replaces any pending interim text, then types the final text.
-        Resets interim counter.
-        """
-        if self._interim_chars > 0:
-            self._backspace(self._interim_chars)
+        """Paste final transcription result into the frontmost app."""
         self._paste_text(text)
-        self._interim_chars = 0
         self._accumulated.append(text)
 
     def get_accumulated_text(self) -> str:
@@ -72,6 +52,5 @@ class TextOutput:
         return "".join(self._accumulated)
 
     def clear(self):
-        """Reset accumulated text and interim counter."""
+        """Reset accumulated text."""
         self._accumulated.clear()
-        self._interim_chars = 0
