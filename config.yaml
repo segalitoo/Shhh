@@ -1,0 +1,6 @@
+hotkey: "<ctrl>+<space>"
+language: en-US
+google_credentials: ~/.config/gcloud/service-account.json
+sample_rate: 16000
+chunk_size: 1600
+grammar_correction: true
