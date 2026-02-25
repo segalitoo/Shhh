@@ -31,8 +31,9 @@ def load_config(path: str = "config.yaml") -> dict:
 class Shhh:
     """Main orchestrator for the dictation tool."""
 
-    def __init__(self, config: dict = None):
+    def __init__(self, config: dict = None, gui: bool = False):
         self._config = config or load_config()
+        self._gui = gui
         self._hotkey_str = self._config.get("hotkey", "<ctrl>+<space>")
         self._language = self._config.get("language", "en-US")
         self._credentials = self._config.get("google_credentials")
@@ -65,22 +66,55 @@ class Shhh:
         # Current mic stream reference for stopping
         self._mic_stream = None
 
+    def _emit(self, tag: str, value: str = ""):
+        """Output a message in the appropriate format.
+
+        GUI mode: structured @@TAG:value protocol lines on stdout.
+        Terminal mode: human-readable formatted output.
+        """
+        if self._gui:
+            if tag != "INFO":  # INFO is terminal-only
+                from src.protocol import format_message
+                print(format_message(tag, value), flush=True)
+            return
+
+        # Terminal mode formatting
+        if tag == "STATUS" and value == "recording":
+            print("\n🎙️  Recording started... (press hotkey again to stop)")
+        elif tag == "STATUS" and value == "processing":
+            print("📝 Running grammar correction...")
+        elif tag == "INTERIM":
+            print(f"\r  💬 {value}    ", end="", flush=True)
+        elif tag == "FINAL":
+            print(f"\r  ✅ {value}    ")
+        elif tag == "ERROR":
+            print(f"\n❌ Transcription error: {value}")
+        elif tag == "INFO":
+            print(value)
+
+    def _start_recording(self):
+        """Begin a recording session."""
+        self._recording = True
+        self._should_stop.clear()
+        self._emit("STATUS", "recording")
+        thread = threading.Thread(target=self._record_and_transcribe, daemon=True)
+        thread.start()
+
+    def _stop_recording(self):
+        """End the current recording session."""
+        self._recording = False
+        self._should_stop.set()
+        if self._mic_stream:
+            self._mic_stream.closed = True
+        if not self._gui:
+            print("\n⏹️  Recording stopped.")
+
     def _on_hotkey(self):
         """Called when the global hotkey is pressed."""
         if not self._recording:
-            self._recording = True
-            self._should_stop.clear()
-            print("\n🎙️  Recording started... (press hotkey again to stop)")
-            # Start recording in a new thread so hotkey listener stays responsive
-            thread = threading.Thread(target=self._record_and_transcribe, daemon=True)
-            thread.start()
+            self._start_recording()
         else:
-            self._recording = False
-            self._should_stop.set()
-            # Close the mic stream to unblock the generator
-            if self._mic_stream:
-                self._mic_stream.closed = True
-            print("\n⏹️  Recording stopped.")
+            self._stop_recording()
 
     def _record_and_transcribe(self):
         """Record audio and stream to Google STT."""
@@ -97,12 +131,11 @@ class Shhh:
                         yield chunk
 
                 def on_interim(text):
-                    # Show live progress in terminal only (no keystrokes = no sound)
-                    print(f"\r  💬 {text}    ", end="", flush=True)
+                    self._emit("INTERIM", text)
 
                 def on_final(text):
                     formatted = format_text(text)
-                    print(f"\r  ✅ {formatted}    ")
+                    self._emit("FINAL", formatted)
                     self._output.type_final(formatted)
 
                 self._transcriber.transcribe_stream(
@@ -111,7 +144,7 @@ class Shhh:
                     on_final=on_final,
                 )
         except Exception as e:
-            print(f"\n❌ Transcription error: {e}")
+            self._emit("ERROR", str(e))
         finally:
             self._mic_stream = None
 
@@ -119,10 +152,9 @@ class Shhh:
         if self._grammar_enabled:
             accumulated = self._output.get_accumulated_text()
             if accumulated.strip():
-                print("📝 Running grammar correction...")
+                self._emit("STATUS", "processing")
                 corrected = correct_text(accumulated, self._language)
                 if corrected != accumulated:
-                    # Select the dictated text with Shift+Left arrows, then paste replacement
                     import subprocess
                     n = len(accumulated)
                     script = (
@@ -134,9 +166,11 @@ class Shhh:
                     )
                     subprocess.run(["osascript", "-e", script], timeout=10)
                     self._output._paste_text(corrected)
-                    print("✅ Grammar corrected.")
+                    self._emit("INFO", "✅ Grammar corrected.")
                 else:
-                    print("✅ No grammar corrections needed.")
+                    self._emit("INFO", "✅ No grammar corrections needed.")
+
+        self._emit("STATUS", "idle")
 
     def run(self):
         """Start the dictation tool. Blocks until Ctrl+C."""
@@ -168,9 +202,55 @@ class Shhh:
                 print("\nGoodbye!")
 
 
+    def run_gui(self):
+        """Start in GUI mode. Reads commands from stdin, outputs protocol to stdout."""
+        self._emit("STATUS", "idle")
+
+        # Start hotkey listener in background (still works alongside GUI controls)
+        hotkey = keyboard.HotKey(
+            keyboard.HotKey.parse(self._hotkey_str),
+            self._on_hotkey,
+        )
+
+        def for_canonical(f):
+            return lambda k: f(hotkey_listener.canonical(k))
+
+        hotkey_listener = keyboard.Listener(
+            on_press=for_canonical(hotkey.press),
+            on_release=for_canonical(hotkey.release),
+        )
+        hotkey_listener.start()
+
+        # Read commands from stdin (main thread blocks here)
+        try:
+            for line in sys.stdin:
+                from src.protocol import parse_command
+                cmd = parse_command(line)
+                if cmd == "START" and not self._recording:
+                    self._on_hotkey()
+                elif cmd == "STOP" and self._recording:
+                    self._on_hotkey()
+                elif cmd == "QUIT":
+                    if self._recording:
+                        self._on_hotkey()
+                    break
+        except (KeyboardInterrupt, EOFError):
+            pass
+        finally:
+            hotkey_listener.stop()
+
+
 def main():
-    app = Shhh()
-    app.run()
+    import argparse
+    parser = argparse.ArgumentParser(description="Shhh — Live dictation tool")
+    parser.add_argument("--gui", action="store_true", help="GUI protocol mode (used by ShhhApp)")
+    args = parser.parse_args()
+
+    app = Shhh(gui=args.gui)
+    if args.gui:
+        app.run_gui()
+    else:
+        app.run()
 
 
 if __name__ == "__main__":
