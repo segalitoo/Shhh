@@ -68,3 +68,20 @@ shhh/
 - Tests in `tests/` with `test_` prefix
 - Config via `config.yaml` in project root
 - Google credentials via Application Default Credentials (gcloud auth)
+
+## macOS App (ShhhApp)
+
+SwiftUI menu bar app wrapping the Python CLI backend.
+
+### Build & Run
+- Build: `cd ShhhApp && swift build -c release`
+- Run: `./ShhhApp/.build/release/ShhhApp`
+- Kill: `killall ShhhApp`
+
+### Architecture
+- Swift Package Manager project in `ShhhApp/`
+- `AppDelegate` owns all state (status, interimText, isPreviewVisible)
+- `PythonBridge` manages `python3 -m src.main --gui` subprocess
+- Communication via `@@TAG:value` stdout protocol + `START/STOP/QUIT` stdin commands
+- Two floating NSPanel windows: toggle button (bottom-center) + preview overlay (top-center)
+- No Dock icon (MenuBarExtra-only + NSApp.accessory activation policy)
