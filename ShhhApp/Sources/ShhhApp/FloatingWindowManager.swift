@@ -46,7 +46,7 @@ class FloatingWindowManager {
         if let screen = NSScreen.main {
             let x = (screen.frame.width - panelWidth) / 2
             // In macOS coordinates, y=0 is bottom. Place panel at top.
-            let y = screen.frame.height - panelHeight - 8
+            let y = screen.frame.height - panelHeight - 13
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 

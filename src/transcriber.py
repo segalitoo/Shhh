@@ -18,6 +18,7 @@ class Transcriber:
             sample_rate_hertz=16000,
             language_code=language,
             alternative_language_codes=alternative_languages or [],
+            enable_automatic_punctuation=True,
         )
         self._streaming_config = speech.StreamingRecognitionConfig(
             config=self._config,

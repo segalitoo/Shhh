@@ -1,4 +1,18 @@
+import AppKit
 import Foundation
+
+/// Log to file since print() is invisible when launched as .app.
+private func bridgeLog(_ message: String) {
+    let entry = "[\(ISO8601DateFormatter().string(from: Date()))] \(message)\n"
+    let path = "/tmp/shhhapp_bridge.log"
+    if let handle = FileHandle(forWritingAtPath: path) {
+        handle.seekToEndOfFile()
+        handle.write(entry.data(using: .utf8)!)
+        handle.closeFile()
+    } else {
+        FileManager.default.createFile(atPath: path, contents: entry.data(using: .utf8))
+    }
+}
 
 /// Manages the Python backend subprocess.
 @MainActor
@@ -20,8 +34,12 @@ class PythonBridge {
             .appendingPathComponent("venv/bin/python3")
             .path
 
+        bridgeLog("Starting PythonBridge")
+        bridgeLog("Project dir: \(projectDir.path)")
+        bridgeLog("Python path: \(pythonPath)")
+
         guard FileManager.default.fileExists(atPath: pythonPath) else {
-            print("[ShhhApp] Python not found at \(pythonPath)")
+            bridgeLog("ERROR: Python not found at \(pythonPath)")
             return
         }
 
@@ -47,6 +65,7 @@ class PythonBridge {
                 return
             }
             if let string = String(data: data, encoding: .utf8) {
+                bridgeLog("stdout: \(string.trimmingCharacters(in: .whitespacesAndNewlines))")
                 Task { @MainActor [weak self] in
                     self?.handleData(string)
                 }
@@ -57,12 +76,13 @@ class PythonBridge {
         stderrPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             if let string = String(data: data, encoding: .utf8), !string.isEmpty {
-                print("[Python stderr] \(string)", terminator: "")
+                bridgeLog("stderr: \(string.trimmingCharacters(in: .whitespacesAndNewlines))")
             }
         }
 
         // Handle process termination
-        proc.terminationHandler = { [weak self] _ in
+        proc.terminationHandler = { [weak self] proc in
+            bridgeLog("Python process terminated with status: \(proc.terminationStatus)")
             Task { @MainActor [weak self] in
                 self?.delegate?.status = .idle
             }
@@ -71,9 +91,9 @@ class PythonBridge {
         do {
             try proc.run()
             self.process = proc
-            print("[ShhhApp] Python backend started (PID: \(proc.processIdentifier))")
+            bridgeLog("Python backend started (PID: \(proc.processIdentifier))")
         } catch {
-            print("[ShhhApp] Failed to start Python: \(error)")
+            bridgeLog("ERROR: Failed to start Python: \(error)")
         }
     }
 
@@ -91,17 +111,32 @@ class PythonBridge {
 
     /// Parse a protocol line and update app state.
     private func handleLine(_ line: String) {
+        bridgeLog("handleLine: \(line)")
         let message = ProtocolParser.parse(line)
 
         guard let delegate = self.delegate else { return }
 
         switch message {
         case .status(let status):
+            bridgeLog("Status change: \(status)")
             delegate.status = status
         case .interim(let text):
             delegate.interimText = text
         case .final_(let text):
+            bridgeLog("Final text (display): \(text)")
             delegate.interimText = text
+            // Display only — actual paste happens on .paste
+            let capturedText = text
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                if delegate.interimText == capturedText {
+                    delegate.interimText = ""
+                }
+            }
+        case .paste(let text):
+            bridgeLog("Paste text: \(text)")
+            delegate.interimText = text
+            pasteText(text)
             let capturedText = text
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(3))
@@ -110,14 +145,16 @@ class PythonBridge {
                 }
             }
         case .error(let msg):
-            print("[ShhhApp] Python error: \(msg)")
+            bridgeLog("Python error: \(msg)")
         case .unknown:
+            bridgeLog("Unknown line: \(line)")
             break
         }
     }
 
     /// Send a command to the Python process via stdin.
     func sendCommand(_ cmd: String) {
+        bridgeLog("Sending command: \(cmd)")
         guard let data = "\(cmd)\n".data(using: .utf8) else { return }
         stdinHandle?.write(data)
     }
@@ -125,9 +162,51 @@ class PythonBridge {
     /// Toggle recording state by sending START or STOP.
     func toggleRecording() {
         if delegate?.isRecording == true {
+            bridgeLog("toggleRecording -> STOP")
             sendCommand("STOP")
         } else {
+            bridgeLog("toggleRecording -> START")
             sendCommand("START")
+        }
+    }
+
+    /// Copy text to clipboard and send Cmd+V to the frontmost app.
+    private func pasteText(_ text: String) {
+        guard !text.isEmpty else {
+            bridgeLog("pasteText: empty text, skipping")
+            return
+        }
+
+        // Copy to clipboard
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        bridgeLog("Copied to clipboard: \(text.prefix(80))")
+
+        // Small delay for clipboard readiness, then send Cmd+V
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.15) {
+            let trusted = AXIsProcessTrusted()
+            bridgeLog("Accessibility trusted: \(trusted)")
+
+            if !trusted {
+                bridgeLog("WARNING: Accessibility not granted — cannot paste.")
+                bridgeLog("Add ShhhApp to: System Settings > Privacy & Security > Accessibility")
+                return
+            }
+
+            // Send Cmd+V via CGEvent
+            guard let source = CGEventSource(stateID: .hidSystemState) else {
+                bridgeLog("ERROR: Could not create CGEventSource")
+                return
+            }
+            let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
+            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+            keyDown?.flags = .maskCommand
+            keyUp?.flags = .maskCommand
+            keyDown?.post(tap: .cghidEventTap)
+            usleep(50_000)  // 50ms between key down and up
+            keyUp?.post(tap: .cghidEventTap)
+            bridgeLog("Paste Cmd+V sent via CGEvent")
         }
     }
 

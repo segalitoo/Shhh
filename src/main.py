@@ -61,7 +61,8 @@ class Shhh:
             alternative_languages=self._alternative_languages,
             credentials_path=self._credentials,
         )
-        self._output = TextOutput()
+        # In GUI mode, Swift handles pasting — Python just emits protocol messages
+        self._output = TextOutput(simulate=gui)
 
         # Current mic stream reference for stopping
         self._mic_stream = None
@@ -116,45 +117,104 @@ class Shhh:
         else:
             self._stop_recording()
 
+    @staticmethod
+    def _strip_bidi_marks(text: str) -> str:
+        """Remove Unicode bidirectional marks (RTL/LTR) from text."""
+        return text.replace('\u200f', '').replace('\u200e', '').replace('\u202a', '').replace('\u202c', '')
+
     def _record_and_transcribe(self):
         """Record audio and stream to Google STT."""
+        import logging
+        logging.basicConfig(filename='/tmp/shhh_debug.log', level=logging.DEBUG,
+                            format='%(asctime)s %(levelname)s %(message)s', force=True)
+        log = logging.getLogger("shhh")
+
         self._output.clear()
+        log.debug("_record_and_transcribe started")
+
+        last_interim = ""
+        got_nonempty_final = False
 
         try:
+            log.debug("Opening MicrophoneStream (rate=%d, chunk=%d)", self._sample_rate, self._chunk_size)
             with MicrophoneStream(self._sample_rate, self._chunk_size) as stream:
                 self._mic_stream = stream
+                log.debug("MicrophoneStream opened successfully")
+
+                chunk_count = 0
 
                 def audio_gen():
+                    nonlocal chunk_count
                     for chunk in stream.generator():
                         if self._should_stop.is_set():
+                            log.debug("Stop signal received after %d chunks", chunk_count)
                             return
+                        chunk_count += 1
+                        if chunk_count <= 3 or chunk_count % 50 == 0:
+                            log.debug("Audio chunk #%d, size=%d bytes", chunk_count, len(chunk))
                         yield chunk
 
                 def on_interim(text):
-                    self._emit("INTERIM", text)
+                    nonlocal last_interim
+                    clean = self._strip_bidi_marks(text)
+                    log.debug("INTERIM: %s (clean: %s)", text, clean)
+                    last_interim = clean
+                    self._emit("INTERIM", clean)
 
                 def on_final(text):
-                    formatted = format_text(text)
-                    self._emit("FINAL", formatted)
-                    self._output.type_final(formatted)
+                    nonlocal last_interim, got_nonempty_final
+                    clean = self._strip_bidi_marks(text)
+                    log.debug("FINAL (raw): %s (clean: %s)", text, clean)
+                    if clean.strip():
+                        formatted = format_text(clean)
+                        self._emit("FINAL", formatted)
+                        self._output.type_final(formatted)
+                        got_nonempty_final = True
+                        last_interim = ""  # Reset after successful final
+                    else:
+                        log.debug("FINAL was empty, will use last interim as fallback")
 
+                log.debug("Starting transcribe_stream to Google STT (lang=%s)", self._language)
                 self._transcriber.transcribe_stream(
                     audio_gen(),
                     on_interim=on_interim,
                     on_final=on_final,
                 )
+                log.debug("transcribe_stream returned normally after %d chunks", chunk_count)
+
+                # Fallback: if STT never produced a non-empty final, use last interim
+                if not got_nonempty_final and last_interim.strip():
+                    log.debug("Using last interim as final fallback: %s", last_interim)
+                    formatted = format_text(last_interim)
+                    self._emit("FINAL", formatted)
+                    self._output.type_final(formatted)
+
         except Exception as e:
+            log.error("Exception in _record_and_transcribe: %s", e, exc_info=True)
             self._emit("ERROR", str(e))
         finally:
             self._mic_stream = None
 
-        # Grammar correction on stop
-        if self._grammar_enabled:
-            accumulated = self._output.get_accumulated_text()
-            if accumulated.strip():
+        # Grammar correction on stop, then paste once
+        accumulated = self._output.get_accumulated_text()
+        if accumulated.strip():
+            final_text = accumulated
+
+            if self._grammar_enabled:
                 self._emit("STATUS", "processing")
                 corrected = correct_text(accumulated, self._language)
                 if corrected != accumulated:
+                    final_text = corrected
+                    self._emit("INFO", "✅ Grammar corrected.")
+                else:
+                    self._emit("INFO", "✅ No grammar corrections needed.")
+
+            if self._gui:
+                # GUI mode: single paste via Swift
+                self._emit("PASTE", final_text)
+            else:
+                # Terminal mode: if grammar corrected, select-all + replace
+                if final_text != accumulated:
                     import subprocess
                     n = len(accumulated)
                     script = (
@@ -165,10 +225,7 @@ class Shhh:
                         f'end tell'
                     )
                     subprocess.run(["osascript", "-e", script], timeout=10)
-                    self._output._paste_text(corrected)
-                    self._emit("INFO", "✅ Grammar corrected.")
-                else:
-                    self._emit("INFO", "✅ No grammar corrections needed.")
+                    self._output._paste_text(final_text)
 
         self._emit("STATUS", "idle")
 

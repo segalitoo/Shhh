@@ -5,6 +5,7 @@ enum ProtocolMessage: Equatable {
     case status(DictationStatus)
     case interim(String)
     case final_(String)
+    case paste(String)
     case error(String)
     case unknown
 }
@@ -31,6 +32,8 @@ enum ProtocolParser {
             return .interim(value)
         case "FINAL":
             return .final_(value)
+        case "PASTE":
+            return .paste(value)
         case "ERROR":
             return .error(value)
         default:

@@ -1,5 +1,7 @@
 import SwiftUI
 import Combine
+import AVFoundation
+import ApplicationServices
 
 /// Dictation engine status.
 enum DictationStatus: String {
@@ -34,6 +36,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             // Hide dock icon
             NSApp.setActivationPolicy(.accessory)
 
+            // Request microphone permission (triggers TCC dialog on first run)
+            await requestMicrophoneAccess()
+
+            // Request Accessibility (prompts user to grant in System Settings)
+            requestAccessibilityAccess()
+
             // Start Python bridge
             bridge = PythonBridge(delegate: self)
             bridge?.start()
@@ -41,6 +49,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             // Create floating windows
             windowManager = FloatingWindowManager(delegate: self)
             windowManager?.showAll()
+        }
+    }
+
+    private func requestMicrophoneAccess() async {
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        if status == .notDetermined {
+            let granted = await AVCaptureDevice.requestAccess(for: .audio)
+            if !granted {
+                interimText = "Microphone access denied. Enable in System Settings > Privacy > Microphone."
+            }
+        } else if status == .denied || status == .restricted {
+            interimText = "Microphone access denied. Enable in System Settings > Privacy > Microphone."
+        }
+    }
+
+    private func requestAccessibilityAccess() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        let trusted = AXIsProcessTrustedWithOptions(options)
+        if !trusted {
+            // macOS will show a prompt directing user to System Settings > Accessibility
+            print("Accessibility not yet granted — user prompted.")
         }
     }
 

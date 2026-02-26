@@ -2,8 +2,9 @@
 
 Protocol format (Python -> Swift, on stdout):
     @@STATUS:idle|recording|processing
-    @@INTERIM:text here
-    @@FINAL:text here
+    @@INTERIM:text here          (display only — live preview)
+    @@FINAL:text here            (display only — committed STT result)
+    @@PASTE:text here            (paste into frontmost app)
     @@ERROR:message
 
 Commands (Swift -> Python, on stdin):
@@ -19,7 +20,7 @@ def format_message(tag: str, value: str) -> str:
     """Format a structured GUI protocol message.
 
     Args:
-        tag: Message type (STATUS, INTERIM, FINAL, ERROR).
+        tag: Message type (STATUS, INTERIM, FINAL, PASTE, ERROR).
         value: Message payload.
 
     Returns:
