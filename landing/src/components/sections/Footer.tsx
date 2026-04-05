@@ -17,7 +17,7 @@ export function Footer() {
         ))}
       </div>
       <a
-        href="/"
+        href="https://rannsegal.github.io/ran-portfolio/"
         className="text-sm text-white/30 hover:text-white/60 transition-colors"
       >
         &larr; Back to portfolio

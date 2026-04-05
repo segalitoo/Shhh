@@ -23,8 +23,7 @@ export function PureMinimal() {
               width: 3.5,
               height: h,
               borderRadius: 2,
-              background: "white",
-              opacity: 0.85,
+              background: "linear-gradient(180deg, #ff6b6b, #ee5a24)",
             }}
           />
         ))}
