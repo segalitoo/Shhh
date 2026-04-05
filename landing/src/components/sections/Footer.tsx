@@ -19,7 +19,7 @@ export function Footer() {
           ))}
         </div>
         <a
-          href="https://rannsegal.github.io/ran-portfolio/"
+          href="https://segalitoo.github.io/ran-portfolio/"
           className="text-xs text-white/25 hover:text-white/50 transition-colors"
         >
           &larr; Back to portfolio
