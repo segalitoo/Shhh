@@ -10,30 +10,39 @@ const STEPS = [
 
 export function UserFlow() {
   return (
-    <section className="min-h-screen flex flex-col items-center justify-center px-6 py-24">
+    <section className="py-20 px-6">
       <ScrollReveal>
-        <div className="max-w-4xl w-full">
-          <h2 className="text-3xl font-light tracking-wide text-white/90 mb-12 text-center">
+        <div className="max-w-4xl mx-auto">
+          <div className="section-label">User Flow</div>
+          <h2 className="text-3xl font-light tracking-wide text-white/85 mb-8">
             How it works
           </h2>
 
-          <AnimationPlayer
-            component={UserFlowDemo}
-            durationInFrames={360}
-            compositionWidth={1280}
-            compositionHeight={800}
-          />
+          <div className="grid gap-2.5">
+            {/* Full-width animation hero card */}
+            <div className="bento-card bento-card-accent flex items-center justify-center min-h-[360px] p-4">
+              <AnimationPlayer
+                component={UserFlowDemo}
+                durationInFrames={450}
+                compositionWidth={1280}
+                compositionHeight={800}
+              />
+            </div>
 
-          <div className="flex justify-center gap-12 mt-12">
-            {STEPS.map((s) => (
-              <div key={s.num} className="text-center">
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm text-white/60 mx-auto mb-2">
-                  {s.num}
+            {/* 3 step cards */}
+            <div className="grid grid-cols-3 gap-2.5">
+              {STEPS.map((s) => (
+                <div key={s.num} className="bento-card p-5 flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-full border border-[#ff6b6b]/30 flex items-center justify-center text-xs text-[#ff6b6b]/70 shrink-0 mt-0.5">
+                    {s.num}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-white/70">{s.label}</div>
+                    <div className="text-xs text-white/35 mt-0.5">{s.desc}</div>
+                  </div>
                 </div>
-                <div className="text-sm font-medium text-white/70">{s.label}</div>
-                <div className="text-xs text-white/30 mt-1">{s.desc}</div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </ScrollReveal>

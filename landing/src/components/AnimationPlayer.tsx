@@ -41,7 +41,7 @@ export function AnimationPlayer({
   }, []);
 
   return (
-    <div ref={containerRef} className="w-full max-w-4xl mx-auto">
+    <div ref={containerRef} className="w-full flex items-center justify-center">
       <Player
         ref={playerRef}
         component={component}
@@ -50,9 +50,8 @@ export function AnimationPlayer({
         compositionHeight={compositionHeight}
         fps={fps}
         style={{ width: "100%", borderRadius: "12px" }}
-        controls
         loop
-        clickToPlay
+        autoPlay
       />
     </div>
   );

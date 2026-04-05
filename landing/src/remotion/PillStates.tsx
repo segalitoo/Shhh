@@ -8,42 +8,42 @@ export function PillStates() {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Timeline:
-  // 0-15: idle (nothing)
-  // 15-30: pill springs in
-  // 30-90: recording with waveform, "Listening..."
-  // 90-120: recording with typed transcript
-  // 120-140: processing (dots)
-  // 140-165: pill springs out
-  // 165-180: idle again
+  // Timeline (slowed down):
+  // 0-20: idle (nothing)
+  // 20-40: pill springs in
+  // 40-130: recording with waveform, "Listening..."
+  // 130-190: recording with typed transcript
+  // 190-230: processing (dots)
+  // 230-260: pill springs out
+  // 260-350: idle again (3s end pause)
 
   const enterScale = spring({
     fps,
-    frame: frame - 15,
+    frame: frame - 20,
     config: { damping: 12, stiffness: 120 },
     durationInFrames: 20,
   });
 
   const exitScale = spring({
     fps,
-    frame: frame - 140,
+    frame: frame - 230,
     config: { damping: 15, stiffness: 100 },
     durationInFrames: 20,
   });
 
-  const pillVisible = frame >= 15 && frame < 165;
+  const pillVisible = frame >= 20 && frame < 260;
   const scale = pillVisible ? enterScale * (1 - exitScale) : 0;
 
-  const isRecording = frame >= 30 && frame < 120;
-  const isProcessing = frame >= 120 && frame < 140;
+  const isRecording = frame >= 40 && frame < 190;
+  const isProcessing = frame >= 190 && frame < 230;
 
   // Typed transcript
-  const typingProgress = interpolate(frame, [90, 118], [0, 1], {
+  const typingProgress = interpolate(frame, [130, 185], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   const visibleChars = Math.floor(typingProgress * TRANSCRIPT.length);
-  const showTranscript = frame >= 90 && frame < 120;
+  const showTranscript = frame >= 130 && frame < 190;
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0a0a0a", justifyContent: "center", alignItems: "center" }}>
@@ -92,3 +92,5 @@ export function PillStates() {
     </AbsoluteFill>
   );
 }
+
+// Total duration: 350 frames (~11.7s)

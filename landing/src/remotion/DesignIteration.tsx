@@ -11,12 +11,11 @@ const DESIGNS = [
   { component: PureMinimal, label: "Pure Minimal", desc: "Just waveform and text. Maximum zen." },
 ];
 
-const HOLD_FRAMES = 60; // 2s per design
-
+const HOLD_FRAMES = 120; // 4s per design
+const TRANSITION = 20;
 export function DesignIteration() {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const TRANSITION = 15;
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0a0a0a", justifyContent: "center", alignItems: "center" }}>
@@ -40,7 +39,7 @@ export function DesignIteration() {
 
         const labelSpring = spring({
           fps,
-          frame: frame - start - 5,
+          frame: frame - start - 8,
           config: { damping: 20, stiffness: 100 },
           durationInFrames: 20,
         });
@@ -53,8 +52,8 @@ export function DesignIteration() {
             key={i}
             style={{ opacity, justifyContent: "center", alignItems: "center" }}
           >
-            <div style={{ position: "relative" }}>
-              {isLast && frame > start + 10 && (
+            <div style={{ position: "relative", transform: "scale(2.6)" }}>
+              {isLast && frame > start + 15 && (
                 <div
                   style={{
                     position: "absolute",
@@ -62,7 +61,7 @@ export function DesignIteration() {
                     borderRadius: 30,
                     border: "1px solid rgba(255,107,107,0.3)",
                     boxShadow: "0 0 20px rgba(255,107,107,0.1)",
-                    opacity: interpolate(frame, [start + 10, start + 25], [0, 1], {
+                    opacity: interpolate(frame, [start + 15, start + 35], [0, 1], {
                       extrapolateLeft: "clamp",
                       extrapolateRight: "clamp",
                     }),
@@ -73,7 +72,10 @@ export function DesignIteration() {
             </div>
             <div
               style={{
-                marginTop: 28,
+                position: "absolute",
+                bottom: 40,
+                left: 0,
+                right: 0,
                 textAlign: "center",
                 opacity: labelSpring,
                 transform: `translateY(${(1 - labelSpring) * 10}px)`,
@@ -81,7 +83,7 @@ export function DesignIteration() {
             >
               <div
                 style={{
-                  fontSize: 16,
+                  fontSize: 28,
                   fontWeight: 600,
                   color: isLast ? "#ff6b6b" : "white",
                   letterSpacing: 1,
@@ -90,7 +92,7 @@ export function DesignIteration() {
                 {isLast ? "✓ " : ""}
                 {design.label}
               </div>
-              <div style={{ fontSize: 13, color: "white", opacity: 0.4, marginTop: 4 }}>
+              <div style={{ fontSize: 20, color: "white", opacity: 0.4, marginTop: 8 }}>
                 {design.desc}
               </div>
             </div>
@@ -100,3 +102,5 @@ export function DesignIteration() {
     </AbsoluteFill>
   );
 }
+
+// Total duration: 4 designs * 120 frames + 90 end pause = 570 frames (19s)

@@ -27,3 +27,73 @@ body {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
 }
+
+/* Hero pill pulse */
+@keyframes pill-pulse {
+  0%, 100% { opacity: 0.4; transform: scaleX(1); }
+  50% { opacity: 0.7; transform: scaleX(1.15); }
+}
+
+/* Scroll hint float */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+/* Gradient divider between sections */
+.divider {
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.3), transparent);
+  margin: 0 auto;
+}
+
+/* Bento card base */
+.bento-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.bento-card:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Accent card (for animation hero cards) */
+.bento-card-accent {
+  border-color: rgba(255, 107, 107, 0.12);
+  background: rgba(255, 107, 107, 0.02);
+}
+
+.bento-card-accent::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.08), transparent 50%);
+  pointer-events: none;
+}
+
+/* Radial glow inside animation cards */
+.bento-card-accent::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at center, rgba(255, 107, 107, 0.03), transparent 70%);
+  pointer-events: none;
+}
+
+/* Section label */
+.section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #ff6b6b;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}

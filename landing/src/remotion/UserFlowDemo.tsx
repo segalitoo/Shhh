@@ -6,7 +6,7 @@ import { WaveformBars } from "./components/WaveformBars";
 import { PulsingDots } from "./components/PulsingDots";
 
 const INTERIM_TEXT = "Meeting notes for Monday";
-const FINAL_TEXT = "Meeting notes for Monday — review Q2 targets and finalize budget.";
+const FINAL_TEXT = "Meeting notes for Monday - review Q2 targets and finalize budget.";
 
 export function UserFlowDemo() {
   const frame = useCurrentFrame();
@@ -21,6 +21,7 @@ export function UserFlowDemo() {
   // 250-270: processing dots
   // 270-285: pill springs out
   // 285-360: polished text appears in editor
+  // 360-450: 3s end pause before loop
 
   // Pill visibility
   const pillEnter = spring({
@@ -61,7 +62,7 @@ export function UserFlowDemo() {
       <MockDesktop>
         <MockEditor text={FINAL_TEXT} showTextAfterFrame={285} />
 
-        {/* Pill overlay — top center */}
+        {/* Pill overlay - top center */}
         {pillScale > 0 && (
           <div
             style={{
@@ -116,3 +117,5 @@ export function UserFlowDemo() {
     </AbsoluteFill>
   );
 }
+
+// Total duration: 450 frames (15s)
