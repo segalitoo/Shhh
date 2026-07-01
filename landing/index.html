@@ -1,12 +1,663 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Shhh — Case Study</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>shhh. · a dictation tool, by Crafel</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --surface-0: #FFFFFF;
+      --surface-1: #F6F8FB;
+      --surface-2: #FFFFFF;
+      --surface-sunken: #EEF1F6;
+      --text-primary: #0C1330;
+      --text-secondary: #5A6377;
+      --text-muted: #8A92A3;
+      --border: #E3E8EF;
+      --border-strong: #CBD2DD;
+      --primary: #2563EB;
+      --primary-tint: #E7EFFE;
+      --text-primary-on-tint: #1B4BB8;
+      --accent: #FF5D52;
+      --accent-tint: #FFE9E6;
+      --text-accent: #B53324;
+      --ink-dark: #0C1020;
+      --ink-dark-2: #141A2E;
+      --coral-light: #FF7A70;
+      --coral-deep: #E84A40;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-display: 'DM Serif Display', Georgia, serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+      --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: var(--surface-0);
+      -webkit-font-smoothing: antialiased;
+    }
+    ::selection { background: var(--accent-tint); }
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+    a { color: inherit; }
+
+    /* ── Top navigation ──────────────────────────────────── */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .topnav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-mark {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+      text-decoration: none;
+      margin-right: auto;
+    }
+    .nav-index { display: flex; align-items: center; gap: 26px; }
+    .nav-link {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 7px;
+      text-decoration: none;
+      font-size: 13px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      transition: color 0.2s var(--ease-out);
+    }
+    .nav-link .num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--border-strong);
+      transition: color 0.2s var(--ease-out);
+    }
+    .nav-link:hover { color: var(--text-secondary); }
+    .nav-link.active { color: var(--text-primary); font-weight: 500; }
+    .nav-link.active .num { color: var(--accent); }
+    .nav-portfolio {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      white-space: nowrap;
+      transition: color 0.2s var(--ease-out);
+    }
+    .nav-portfolio:hover { color: var(--text-primary); }
+
+    /* ── Content wrap ────────────────────────────────────── */
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ── Eyebrow + section numerals ──────────────────────── */
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      font-weight: 500;
+      color: var(--text-accent);
+    }
+    .sec {
+      position: relative;
+      padding: 96px 0;
+      border-top: 1px solid var(--border);
+      scroll-margin-top: 76px;
+    }
+    .sec:first-of-type { border-top: none; }
+    .sec-num {
+      position: absolute;
+      top: 72px;
+      right: 0;
+      font-family: var(--font-display);
+      font-size: 120px;
+      line-height: 1;
+      color: var(--surface-sunken);
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+    .sec > * { position: relative; z-index: 1; }
+
+    .display {
+      font-family: var(--font-display);
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Hero ────────────────────────────────────────────── */
+    .hero {
+      padding: 88px 0 104px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .hero-word {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: clamp(72px, 11vw, 132px);
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+    .hero-tag {
+      margin-top: 24px;
+      font-size: 19px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      max-width: 32ch;
+    }
+    .hero-stage {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-stage::after {
+      content: '';
+      position: absolute;
+      width: 360px; height: 360px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,93,82,0.10), transparent 65%);
+      filter: blur(40px);
+    }
+
+    /* ── Pill demo (the real product) ────────────────────── */
+    .pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      background: var(--ink-dark);
+      border-radius: 24px;
+      padding: 15px 22px;
+      box-shadow: 0 16px 40px rgba(12,16,32,0.28);
+      position: relative;
+      z-index: 1;
+      min-width: 220px;
+    }
+    .wave { display: flex; align-items: center; gap: 3px; height: 22px; }
+    .wave span {
+      width: 3.5px; border-radius: 2px;
+      background: linear-gradient(180deg, var(--coral-light), var(--coral-deep));
+      animation: wv 0.7s ease-in-out infinite;
+    }
+    .wave span:nth-child(1){height:6px;  animation-delay:0s}
+    .wave span:nth-child(2){height:10px; animation-delay:.06s}
+    .wave span:nth-child(3){height:14px; animation-delay:.12s}
+    .wave span:nth-child(4){height:18px; animation-delay:.18s}
+    .wave span:nth-child(5){height:22px; animation-delay:.24s}
+    .wave span:nth-child(6){height:18px; animation-delay:.18s}
+    .wave span:nth-child(7){height:14px; animation-delay:.12s}
+    .wave span:nth-child(8){height:10px; animation-delay:.06s}
+    .wave span:nth-child(9){height:6px;  animation-delay:0s}
+    @keyframes wv { 0%,100%{transform:scaleY(.5);opacity:.7} 50%{transform:scaleY(1);opacity:1} }
+    .pill-text { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.5); }
+
+    /* ── Problem: asymmetric statement ───────────────────── */
+    .statement {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.2;
+      color: var(--text-primary);
+      max-width: 28ch;
+      margin: 24px 0 0;
+    }
+    .statement em { font-style: italic; color: var(--text-accent); }
+    .split {
+      margin-top: 40px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 820px;
+    }
+    .split p {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      text-wrap: pretty;
+    }
+    .lede { margin-top: 20px; font-size: 17px; color: var(--text-secondary); max-width: 56ch; }
+
+    /* ── Exploration: horizontal scroll strip ────────────── */
+    .strip {
+      margin-top: 40px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .variant {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .variant.chosen {
+      border-color: var(--border-strong);
+      box-shadow: 0 10px 28px rgba(12, 19, 48, 0.10);
+    }
+    .variant-top { display: flex; align-items: center; justify-content: space-between; }
+    .variant-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .chip {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600;
+      background: var(--primary); color: #fff; padding: 2px 8px; border-radius: 99px;
+    }
+    .variant-stage {
+      height: 70px; border-radius: 10px; background: var(--surface-sunken);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .variant-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+    .mini { display: flex; align-items: center; gap: 8px; background: #111; color: rgba(255,255,255,0.8);
+            border-radius: 99px; padding: 6px 12px; font-size: 11px; }
+    .mini-bars { display: flex; gap: 2px; align-items: center; }
+    .mini-bars i { width: 2px; border-radius: 1px; background: linear-gradient(180deg, var(--coral-light), var(--coral-deep)); display:block; }
+    .reddot { width: 7px; height: 7px; border-radius: 50%; background: #ff3b30; }
+
+    /* ── Full-bleed dark pill moment ─────────────────────── */
+    .fullbleed {
+      background: var(--ink-dark);
+      color: #EAEDF5;
+      padding: 104px 32px;
+      position: relative;
+      overflow: hidden;
+      scroll-margin-top: 60px;
+    }
+    .fullbleed::before {
+      content: '';
+      position: absolute; top: 50%; left: 50%;
+      width: 620px; height: 620px; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(255,93,82,0.14), transparent 62%);
+      filter: blur(60px);
+    }
+    .fullbleed-inner { max-width: 760px; margin: 0 auto; text-align: center; position: relative; z-index: 1; }
+    .fullbleed .eyebrow { color: var(--coral-light); }
+    .fullbleed h2 { color: #fff; margin-top: 14px; font-size: clamp(34px, 5vw, 52px); }
+    .fullbleed .pill { margin: 48px auto 0; transform: scale(1.15); }
+    .annot {
+      margin-top: 64px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 28px;
+      text-align: left;
+    }
+    .annot .k { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--coral-light); font-weight: 500; }
+    .annot .v { font-size: 13px; color: rgba(234,237,245,0.6); line-height: 1.6; margin-top: 6px; }
+
+    /* ── Flow: numbered timeline ─────────────────────────── */
+    .flow {
+      margin-top: 48px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      max-width: 820px;
+    }
+    .flow-step { position: relative; padding-right: 28px; }
+    .flow-step:not(:last-child)::after {
+      content: ''; position: absolute; top: 16px; left: 40px; right: 12px;
+      height: 1px; background: var(--border);
+    }
+    .flow-dot {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1.5px solid var(--accent); color: var(--text-accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 13px; background: var(--surface-0);
+      position: relative; z-index: 1;
+    }
+    .flow-step h4 { margin-top: 18px; font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .flow-step p { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+
+    /* ── Craft: spec definition rows ─────────────────────── */
+    .specs { margin-top: 40px; border-top: 1px solid var(--border); max-width: 920px; }
+    .spec-row {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 32px;
+      padding: 22px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: baseline;
+      transition: background 0.2s var(--ease-out);
+    }
+    .spec-row:hover { background: var(--surface-1); }
+    .spec-name {
+      font-size: 16px; font-weight: 600; color: var(--text-primary);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .spec-name .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .spec-desc { font-size: 15px; color: var(--text-secondary); line-height: 1.6; }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .foot {
+      border-top: 1px solid var(--border);
+      padding: 56px 0 80px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .foot-word { font-family: var(--font-display); font-style: italic; font-size: 40px; color: var(--text-primary); }
+    .foot-left { display: flex; flex-direction: column; gap: 12px; }
+    .foot-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+    .foot-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
+    .foot-stack { font-size: 13px; color: var(--text-muted); line-height: 1.9; text-align: right; }
+    .foot-stack b { color: var(--text-secondary); font-weight: 500; }
+
+    /* ── Crafel studio credit bar ────────────────────────── */
+    .crafel-bar {
+      border-top: 1px solid var(--border);
+      padding: 22px 0 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .crafel-lockup { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+    .crafel-mark { width: 32px; height: 32px; flex-shrink: 0; display: block; }
+    .crafel-wm { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); }
+    .crafel-slash, .crafel-pn { font-size: 22px; color: var(--text-muted); }
+    .crafel-note { font-size: 12px; color: var(--text-muted); }
+
+    /* ── Reveal ──────────────────────────────────────────── */
+    .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out); }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .topnav-inner { flex-wrap: wrap; gap: 12px 20px; padding: 14px 20px; }
+      .nav-mark { margin-right: 0; }
+      .nav-portfolio { margin-left: auto; }
+      .nav-index {
+        order: 3; width: 100%; gap: 18px;
+        overflow-x: auto; padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .wrap { padding: 0 20px; }
+      .hero { grid-template-columns: 1fr; gap: 32px; padding: 56px 0 72px; }
+      .hero-stage { min-height: 240px; }
+      .split, .annot, .flow { grid-template-columns: 1fr; gap: 24px; }
+      .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .flow-step { padding-right: 0; }
+      .flow-step::after { display: none; }
+      .spec-row { grid-template-columns: 1fr; gap: 6px; }
+      .sec-num { font-size: 80px; top: 56px; }
+      .foot { flex-direction: column; align-items: flex-start; }
+      .foot-stack { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top navigation ─────────────────────────────────── -->
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="nav-mark" href="#top">shhh.</a>
+      <nav class="nav-index">
+        <a class="nav-link" href="#problem">Problem</a>
+        <a class="nav-link" href="#explore">Exploration</a>
+        <a class="nav-link" href="#pill">The pill</a>
+        <a class="nav-link" href="#flow">How it works</a>
+        <a class="nav-link" href="#craft">Craft</a>
+      </nav>
+      <a class="nav-portfolio" href="https://segalitoo.github.io/ran-portfolio/">&larr; Portfolio</a>
+    </div>
+  </header>
+
+  <div class="wrap" id="top">
+
+    <!-- Hero -->
+    <header class="hero">
+      <div>
+        <div class="hero-word">shhh.</div>
+        <p class="hero-tag">A macOS dictation tool, designed to disappear.</p>
+      </div>
+      <div class="hero-stage">
+        <div class="pill">
+          <div class="wave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="pill-text">I want to send a quick note</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 01 Problem -->
+    <section class="sec" id="problem">
+      <div class="eyebrow">The problem</div>
+      <h2 class="statement">Voice input should feel <em>invisible</em>, as natural as typing.</h2>
+      <p class="lede">
+        Most dictation tools are clunky. They pop modal windows, break your flow,
+        and feel bolted onto the OS. For bilingual users the gap is wider still: nothing
+        auto-detects whether you are speaking English or Hebrew.
+      </p>
+      <div class="split">
+        <p>
+          I wanted something that lives in the background, activates with a single key,
+          and gets out of the way the moment you are done.
+        </p>
+        <p>
+          No setup ritual, no dashboard, no learning curve. You tap, you talk, the text
+          lands where your cursor already is.
+        </p>
+      </div>
+    </section>
+
+    <!-- 02 Exploration -->
+    <section class="sec" id="explore">
+      <div class="eyebrow">Design exploration</div>
+      <h2 class="display" style="font-size: clamp(28px,4vw,40px); margin-top: 14px;">Finding the right indicator</h2>
+      <p class="lede">
+        Inspired by Apple's Dynamic Island, I drew four floating indicators, from
+        information-dense to radically minimal. Then I lived with each one.
+      </p>
+
+      <div class="strip">
+        <div class="variant">
+          <div class="variant-top"><span class="variant-name">Slim dropdown</span></div>
+          <div class="variant-stage">
+            <div class="mini">
+              <span class="mini-bars"><i style="height:4px"></i><i style="height:7px"></i><i style="height:5px"></i></span>
+              0:03
+            </div>
+          </div>
+          <div class="variant-desc">Timer plus a compact bar. Useful, but it asks to be watched.</div>
+        </div>
+
+        <div class="variant">
+          <div class="variant-top"><span class="variant-name">Red ring</span></div>
+          <div class="variant-stage">
+            <div class="mini"><span class="reddot"></span> Recording</div>
+          </div>
+          <div class="variant-desc">An explicit status dot. Honest, but a little anxious.</div>
+        </div>
+
+        <div class="variant chosen">
+          <div class="variant-top"><span class="variant-name">Pure minimal</span><span class="chip">Chosen</span></div>
+          <div class="variant-stage">
+            <div class="mini" style="background:#0C1020">
+              <span class="mini-bars"><i style="height:5px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:9px"></i><i style="height:5px"></i></span>
+              speaking
+            </div>
+          </div>
+          <div class="variant-desc">Waveform and live text only. It tells you it is listening without demanding attention.</div>
+        </div>
+
+        <div class="variant">
+          <div class="variant-top"><span class="variant-name">Full island</span></div>
+          <div class="variant-stage">
+            <div class="mini" style="flex-direction:column; gap:3px; border-radius:12px">
+              <span style="display:flex; gap:6px; align-items:center"><span class="mini-bars"><i style="height:7px"></i><i style="height:10px"></i><i style="height:7px"></i></span> Listening</span>
+              <span style="font-size:9px; color:rgba(255,255,255,0.4)">0:04 · en-US</span>
+            </div>
+          </div>
+          <div class="variant-desc">An expanded panel with more state. Too much for a tool meant to vanish.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 03 The pill — full bleed dark moment -->
+  <section class="fullbleed" id="pill">
+    <div class="fullbleed-inner reveal">
+      <div class="eyebrow">The pill</div>
+      <h2 class="display">Pure minimal won.</h2>
+      <div class="pill">
+        <div class="wave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="pill-text">and that is all it needs to say</div>
+      </div>
+      <div class="annot">
+        <div><div class="k">Spring</div><div class="v">Organic feel as it appears and leaves.</div></div>
+        <div><div class="k">9-bar waveform</div><div class="v">Staggered timing, driven by real audio.</div></div>
+        <div><div class="k">Coral gradient</div><div class="v">Warm tones, soft not harsh, inviting.</div></div>
+        <div><div class="k">All in one</div><div class="v">Text lives inside. No separate panel.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+
+    <!-- 04 Flow -->
+    <section class="sec" id="flow" style="border-top:none;">
+      <div class="eyebrow">How it works</div>
+      <h2 class="display" style="font-size: clamp(28px,4vw,40px); margin-top: 14px;">Three steps, no friction</h2>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-dot">1</div>
+          <h4>Tap the hotkey</h4>
+          <p>Right-Command. One key, no chord.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">2</div>
+          <h4>Speak</h4>
+          <p>English or Hebrew. It auto-detects.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">3</div>
+          <h4>Text appears</h4>
+          <p>Polished by Claude, pasted at your cursor.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 Craft -->
+    <section class="sec" id="craft">
+      <div class="eyebrow">Craft</div>
+      <h2 class="display" style="font-size: clamp(28px,4vw,40px); margin-top: 14px;">The details that matter</h2>
+
+      <div class="specs">
+        <div class="spec-row">
+          <div class="spec-name"><span class="dot"></span> Bilingual</div>
+          <div class="spec-desc">English and Hebrew, with automatic language detection per utterance.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-name"><span class="dot"></span> Grammar polish</div>
+          <div class="spec-desc">Claude adds punctuation and fixes transcription slips when you stop.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-name"><span class="dot"></span> Streaming STT</div>
+          <div class="spec-desc">Real-time interim results appear as you speak, not after.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-name"><span class="dot"></span> Right-Command</div>
+          <div class="spec-desc">A single key tap to start and stop. No chord, no UI to hunt for.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-name"><span class="dot"></span> Paste anywhere</div>
+          <div class="spec-desc">Text lands at your cursor in any app, native or web.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-name"><span class="dot"></span> Menu bar only</div>
+          <div class="spec-desc">No Dock icon, no window. Invisible until you need it.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="foot">
+      <div class="foot-left">
+        <div class="foot-word">shhh.</div>
+      </div>
+      <div class="foot-stack">
+        Built with <b>Python</b>, <b>Swift</b>, <b>Google Cloud STT</b>,<br>
+        <b>Claude</b> and <b>Remotion</b>.<br>
+        <a href="https://segalitoo.github.io/ran-portfolio/" style="text-decoration:none; color:var(--text-muted)">segalitoo.github.io/ran-portfolio &rarr;</a>
+      </div>
+    </footer>
+
+    <div class="crafel-bar">
+      <a class="crafel-lockup" href="#top" aria-label="Crafel">
+        <svg class="crafel-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Crafel">
+          <rect width="64" height="64" rx="16" fill="#2563EB"/>
+          <path d="M38.4 42 A13 13 0 1 1 38.4 22" fill="none" stroke="#FFFFFF" stroke-width="9.5" stroke-linecap="round"/>
+          <path d="M38.4 42 A13 13 0 1 1 38.4 22" fill="none" stroke="#FF5D52" stroke-width="9.5" stroke-linecap="round" stroke-dasharray="0.1 1000"/>
+        </svg>
+        <span class="crafel-wm">Crafel</span>
+        <span class="crafel-slash">/</span>
+        <span class="crafel-pn">shhh</span>
+      </a>
+      <span class="crafel-note">One brand across every tool.</span>
+    </div>
+  </div>
+
+  <script>
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach((el) => obs.observe(el));
+
+    const links = [...document.querySelectorAll('.nav-link')];
+    const map = new Map(links.map((l) => [l.getAttribute('href').slice(1), l]));
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          links.forEach((l) => l.classList.remove('active'));
+          const l = map.get(e.target.id);
+          if (l) l.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    ['problem','explore','pill','flow','craft'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) spy.observe(el);
+    });
+  </script>
+</body>
 </html>
